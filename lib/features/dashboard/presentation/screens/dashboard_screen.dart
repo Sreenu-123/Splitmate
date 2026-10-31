@@ -9,6 +9,7 @@ import '../widgets/bottom_nav_bar.dart';
 
 import '../../../groups/presentation/screens/groups_screen.dart';
 import '../../../expenses/presentation/screens/activity_screen.dart';
+import '../../../profile/presentation/screens/profile_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -44,12 +45,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _buildHomeScreen(),
     const GroupsScreen(),
     const ActivityScreen(),
-    const Center(
-      child: Text(
-        'Profile Screen',
-        style: TextStyle(color: Colors.white, fontSize: 20),
-      ),
-    ),
+    const ProfileScreen(),
   ];
 
   @override
