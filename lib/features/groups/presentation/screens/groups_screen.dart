@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../settlements/presentation/screens/settle_up_screen.dart';
+import '../../../settlements/domain/entities/settlement.dart';
 
 class GroupsScreen extends StatefulWidget {
   const GroupsScreen({super.key});
@@ -48,6 +50,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
         'description': result['description'] ?? '',
         'members': members,
         'expenses': <Map<String, dynamic>>[],
+        'paidSettlements': <Map<String, dynamic>>[],
         'createdAt': DateTime.now(),
       });
     });
@@ -79,7 +82,10 @@ class _GroupsScreenState extends State<GroupsScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: Colors.redAccent),
+            ),
           ),
         ],
       ),
@@ -148,8 +154,11 @@ class _GroupsScreenState extends State<GroupsScreen> {
                         color: AppTheme.primary.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(15),
                       ),
-                      child: const Icon(Icons.groups_rounded,
-                          color: AppTheme.primary, size: 27),
+                      child: const Icon(
+                        Icons.groups_rounded,
+                        color: AppTheme.primary,
+                        size: 27,
+                      ),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
@@ -169,7 +178,10 @@ class _GroupsScreenState extends State<GroupsScreen> {
                           const SizedBox(height: 6),
                           Text(
                             '${members.length} members  •  ${expenses.length} expenses',
-                            style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                            style: TextStyle(
+                              color: Colors.grey.shade500,
+                              fontSize: 12,
+                            ),
                           ),
                           const SizedBox(height: 6),
                           Text(
@@ -192,8 +204,11 @@ class _GroupsScreenState extends State<GroupsScreen> {
           IconButton(
             tooltip: 'Delete group',
             onPressed: () => _deleteGroup(group),
-            icon: const Icon(Icons.delete_outline_rounded,
-                color: Colors.redAccent, size: 21),
+            icon: const Icon(
+              Icons.delete_outline_rounded,
+              color: Colors.redAccent,
+              size: 21,
+            ),
           ),
           const SizedBox(width: 6),
         ],
@@ -377,7 +392,74 @@ class _GroupDetailsSheetState extends State<GroupDetailsSheet> {
       }
     }
 
+    final paidSettlements =
+        (widget.group['paidSettlements'] as List<Map<String, dynamic>>?) ?? [];
+
+    // A completed payment reduces the sender's debt and the receiver's credit.
+    for (final payment in paidSettlements) {
+      final fromId = payment['fromMemberId'] as String;
+      final toId = payment['toMemberId'] as String;
+      final amount = payment['amountPaise'] as int;
+
+      balances[fromId] = (balances[fromId] ?? 0) + amount;
+      balances[toId] = (balances[toId] ?? 0) - amount;
+    }
+
     return balances;
+  }
+
+  // OPEN SETTLEMENT SCREEN
+  void _openSettleUp() {
+    final memberNames = <String, String>{
+      for (final member in members) member['id']!: member['name']!,
+    };
+
+    // Make sure this group has a place to store completed payments.
+    widget.group.putIfAbsent(
+      'paidSettlements',
+      () => <Map<String, dynamic>>[],
+    );
+
+    final balances = _calculateBalances();
+
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => SettleUpScreen(
+          memberNames: memberNames,
+          balances: balances,
+          onSettlementPaid: _markSettlementPaid,
+          paidSettlementIds: (widget.group['paidSettlements'] as List)
+              .map((item) => item['id'].toString())
+              .toSet(),
+        ),
+      ),
+    ).then((_) {
+      if (mounted) setState(() {});
+      widget.onChanged();
+    });
+  }
+
+  void _markSettlementPaid(Settlement settlement) {
+    final paidSettlements =
+        widget.group['paidSettlements'] as List<Map<String, dynamic>>;
+
+    final id =
+        '${settlement.fromMemberId}_${settlement.toMemberId}_${settlement.amountPaise}';
+
+    final alreadyPaid = paidSettlements.any((item) => item['id'] == id);
+    if (alreadyPaid) return;
+
+    setState(() {
+      paidSettlements.add({
+        'id': id,
+        'fromMemberId': settlement.fromMemberId,
+        'toMemberId': settlement.toMemberId,
+        'amountPaise': settlement.amountPaise,
+        'paidAt': DateTime.now(),
+      });
+    });
+
+    widget.onChanged();
   }
 
   // ADD EXPENSE
@@ -776,6 +858,29 @@ class _GroupDetailsSheetState extends State<GroupDetailsSheet> {
                     ),
                   ),
 
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 50,
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: expenses.isEmpty ? null : _openSettleUp,
+                      icon: const Icon(Icons.swap_horiz_rounded),
+                      label: const Text(
+                        'Settle Up',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.primary,
+                        side: BorderSide(
+                          color: AppTheme.primary.withValues(alpha: 0.55),
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    ),
+                  ),
+
                   const SizedBox(height: 28),
                   _buildBalances(),
                   const SizedBox(height: 28),
@@ -854,8 +959,6 @@ class _GroupDetailsSheetState extends State<GroupDetailsSheet> {
       ),
     );
   }
-
-
 }
 
 // ============================================================
@@ -938,6 +1041,7 @@ class _AddGroupExpenseDialogState extends State<AddGroupExpenseDialog> {
   // Remaining paise are distributed one by one.
   Map<String, int> _calculateEqualSplit(int totalPaise) {
     final selected = _selectedMemberIds.toList();
+    if (selected.isEmpty) return {};
 
     final baseShare = totalPaise ~/ selected.length;
     final remainder = totalPaise % selected.length;
@@ -1013,7 +1117,9 @@ class _AddGroupExpenseDialogState extends State<AddGroupExpenseDialog> {
     } else {
       final customShares = _calculateCustomSplit(totalPaise);
       if (customShares == null) {
-        fail('Enter a valid share for every selected member. The shares must add up exactly to the total amount.');
+        fail(
+          'Enter a valid share for every selected member. The shares must add up exactly to the total amount.',
+        );
         return;
       }
       shares = customShares;
@@ -1030,7 +1136,6 @@ class _AddGroupExpenseDialogState extends State<AddGroupExpenseDialog> {
       'shares': shares,
     });
   }
-
 
   InputDecoration _decoration(String hint) {
     return InputDecoration(
@@ -1228,11 +1333,16 @@ class _AddGroupExpenseDialogState extends State<AddGroupExpenseDialog> {
                   decoration: BoxDecoration(
                     color: Colors.redAccent.withValues(alpha: 0.10),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.redAccent.withValues(alpha: 0.35)),
+                    border: Border.all(
+                      color: Colors.redAccent.withValues(alpha: 0.35),
+                    ),
                   ),
                   child: Text(
                     _errorMessage!,
-                    style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+                    style: const TextStyle(
+                      color: Colors.redAccent,
+                      fontSize: 12,
+                    ),
                   ),
                 ),
               ],
@@ -1337,7 +1447,6 @@ class _AddGroupExpenseDialogState extends State<AddGroupExpenseDialog> {
       ),
     );
   }
-
 }
 
 // ============================================================
