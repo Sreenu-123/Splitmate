@@ -8,14 +8,19 @@ SplitMate is an expense-sharing application built with Flutter that makes managi
 
 ## 📸 Screenshots
 
+## 🚀 Splash Screen
 <img width="439" height="898" alt="Screenshot 2026-10-31 at 12 11 45 PM" src="https://github.com/user-attachments/assets/0e2b64e7-70c2-4555-8132-c702c5cd5aa2" />
 
+## 🏠 Home Screen
 <img width="427" height="899" alt="Screenshot 2026-10-31 at 12 12 17 PM" src="https://github.com/user-attachments/assets/49b39a0d-6a8a-4a26-8500-2684b42d0b02" />
 
+## 👥 Groups Screen
 <img width="434" height="899" alt="Screenshot 2026-10-31 at 12 12 53 PM" src="https://github.com/user-attachments/assets/4ac87978-42e0-4dbb-8c25-3a439255d7f7" />
 
+## 📊 Activity Screen
 <img width="437" height="895" alt="Screenshot 2026-10-31 at 12 13 16 PM" src="https://github.com/user-attachments/assets/c2c668aa-d05f-4844-ae55-97a65db7042c" />
 
+## 👤 Profile Screen
 <img width="450" height="897" alt="Screenshot 2026-10-31 at 12 13 38 PM" src="https://github.com/user-attachments/assets/c7bf486f-b1bf-4c6d-bc45-0b1fc19cd828" />
 
 
