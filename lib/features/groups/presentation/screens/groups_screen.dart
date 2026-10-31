@@ -415,28 +415,27 @@ class _GroupDetailsSheetState extends State<GroupDetailsSheet> {
     };
 
     // Make sure this group has a place to store completed payments.
-    widget.group.putIfAbsent(
-      'paidSettlements',
-      () => <Map<String, dynamic>>[],
-    );
+    widget.group.putIfAbsent('paidSettlements', () => <Map<String, dynamic>>[]);
 
     final balances = _calculateBalances();
 
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => SettleUpScreen(
-          memberNames: memberNames,
-          balances: balances,
-          onSettlementPaid: _markSettlementPaid,
-          paidSettlementIds: (widget.group['paidSettlements'] as List)
-              .map((item) => item['id'].toString())
-              .toSet(),
-        ),
-      ),
-    ).then((_) {
-      if (mounted) setState(() {});
-      widget.onChanged();
-    });
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute<void>(
+            builder: (_) => SettleUpScreen(
+              memberNames: memberNames,
+              balances: balances,
+              onSettlementPaid: _markSettlementPaid,
+              paidSettlementIds: (widget.group['paidSettlements'] as List)
+                  .map((item) => item['id'].toString())
+                  .toSet(),
+            ),
+          ),
+        )
+        .then((_) {
+          if (mounted) setState(() {});
+          widget.onChanged();
+        });
   }
 
   void _markSettlementPaid(Settlement settlement) {
@@ -573,6 +572,133 @@ class _GroupDetailsSheetState extends State<GroupDetailsSheet> {
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _addMember() async {
+    String enteredName = '';
+
+    final name = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF202326),
+          title: const Text(
+            'Add Member',
+            style: TextStyle(color: Colors.white),
+          ),
+          content: TextField(
+            autofocus: true,
+            style: const TextStyle(color: Colors.white),
+            onChanged: (value) {
+              enteredName = value;
+            },
+            decoration: const InputDecoration(
+              hintText: 'Enter member name',
+              hintStyle: TextStyle(color: Colors.white38),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+              },
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(dialogContext, enteredName.trim());
+              },
+              child: const Text('Add'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (!mounted || name == null || name.isEmpty) {
+      return;
+    }
+
+    final newMember = {
+      'id': 'member_${DateTime.now().microsecondsSinceEpoch}',
+      'name': name,
+    };
+
+    setState(() {
+      members.add(newMember);
+    });
+
+    widget.onChanged();
+  }
+
+  Widget _buildMembers() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Group Members',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              '${members.length} members',
+              style: const TextStyle(color: Colors.white38, fontSize: 11),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+
+        ...members.map((member) {
+          return Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFF15191A),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: AppTheme.primary.withValues(alpha: 0.12),
+                  child: Text(
+                    member['name']!.isNotEmpty
+                        ? member['name']![0].toUpperCase()
+                        : '?',
+                    style: const TextStyle(
+                      color: AppTheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    member['name']!,
+                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+
+        OutlinedButton.icon(
+          onPressed: _addMember,
+          icon: const Icon(Icons.person_add_alt_1),
+          label: const Text('Add Member'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppTheme.primary,
+            side: BorderSide(color: AppTheme.primary.withValues(alpha: 0.5)),
+          ),
+        ),
+      ],
     );
   }
 
@@ -836,6 +962,8 @@ class _GroupDetailsSheetState extends State<GroupDetailsSheet> {
                   ],
                   const SizedBox(height: 20),
                   _buildSummaryCard(),
+                  const SizedBox(height: 25),
+                  _buildMembers(),
                   const SizedBox(height: 25),
 
                   // ADD EXPENSE BUTTON
