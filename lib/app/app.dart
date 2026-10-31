@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../core/theme/app_theme.dart';
 import '../features/splash/presentation/screens/splash_screen.dart';
-import '../features/dashboard/presentation/screens/dashboard_screen.dart';
 
 class SplitMateApp extends StatelessWidget {
   const SplitMateApp({super.key});
@@ -13,7 +12,7 @@ class SplitMateApp extends StatelessWidget {
       title: 'SplitMate',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
-      home: const DashboardScreen(),
+      home: const SplashScreen(),
     );
   }
 }
